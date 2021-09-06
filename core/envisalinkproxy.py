@@ -75,6 +75,7 @@ class ProxyConnection(object):
                             get_checksum('005', self.config.envisalinkproxypass)):
                         logger.info('Proxy User Authenticated')
                         self.authenticated = True
+                        self.send_command('500005')
                         self.send_command('5051')
                     else:
                         logger.info('Proxy User Authentication failed')
