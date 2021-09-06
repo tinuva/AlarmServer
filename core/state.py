@@ -60,6 +60,9 @@ class State():
             else:
                 Events.put('statechange', type, parameters, code, event, message, default_status)
 
+        else:
+            Events.put('stateinit', type, parameters, code, event, message, defaultStatus)
+
         #write event
         State.state[type][parameters]['lastevents'].append({
             'datetime' : str(datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")),
