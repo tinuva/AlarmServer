@@ -1,79 +1,187 @@
-import ConfigParser
+"""Config Module"""
+#pylint: disable=R0901,R0904
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 from core import logger
 
-MAXPARTITIONS=16
-MAXZONES=128
-MAXALARMUSERS=47
-
-class config():
-    @staticmethod
-    def load(configfile):
+class Config(configparser.RawConfigParser):
+    """Config class"""
+    def __init__(self, configfile='alarmserver.cfg', maxpartitions=16,
+                 maxzones=128, maxalarmusers=47):
+        self.maxpartitions = maxpartitions
+        self.maxzones = maxzones
+        self.maxalarmusers = maxalarmusers
         logger.debug('Loading config file: %s' % configfile)
-        config._config = ConfigParser.ConfigParser()
+        super(Config, self).__init__()
+        self.read(configfile)
 
-        if config._config.read(configfile) == []:
-            raise RuntimeError('Unable to load config file: %s' % configfile)
-
-        config.LOGURLREQUESTS = config.read_config_var('alarmserver', 'logurlrequests', True, 'bool')
-        config.HTTPSPORT = config.read_config_var('alarmserver', 'httpsport', 8111, 'int')
-        config.HTTPS = config.read_config_var('alarmserver', 'https', True, 'bool')
-        config.CERTFILE = config.read_config_var('alarmserver', 'certfile', 'server.crt', 'str')
-        config.KEYFILE = config.read_config_var('alarmserver', 'keyfile', 'server.key', 'str')
-        config.HTTPPORT = config.read_config_var('alarmserver', 'httpport', 8011, 'int')
-        config.HTTP = config.read_config_var('alarmserver', 'http', False, 'bool')
-        config.WEBAUTHUSER = config.read_config_var('alarmserver', 'webauthuser', False, 'str')
-        config.WEBAUTHPASS = config.read_config_var('alarmserver', 'webauthpass', False, 'str')
-        config.MAXEVENTS = config.read_config_var('alarmserver', 'maxevents', 10, 'int')
-        config.MAXALLEVENTS = config.read_config_var('alarmserver', 'maxallevents', 100, 'int')
-        config.ENVISALINKHOST = config.read_config_var('envisalink', 'host', 'envisalink', 'str')
-        config.ENVISALINKPORT = config.read_config_var('envisalink', 'port', 4025, 'int')
-        config.ENVISALINKPASS = config.read_config_var('envisalink', 'pass', 'user', 'str')
-        config.ENVISALINKKEEPALIVE = config.read_config_var('envisalink', 'keepalive', 60, 'int')
-        config.ENVISALINKLOGRAW = config.read_config_var('envisalink', 'lograwmessage', False, 'bool')
-        config.ENABLEPROXY = config.read_config_var('envisalink', 'enableproxy', True, 'bool')
-        config.ENVISALINKPROXYPORT = config.read_config_var('envisalink', 'proxyport', config.ENVISALINKPORT, 'int')
-        config.ENVISALINKPROXYPASS = config.read_config_var('envisalink', 'proxypass', config.ENVISALINKPASS, 'str')
-        config.ALARMCODE = config.read_config_var('envisalink', 'alarmcode', 1111, 'int')
-        config.EVENTTIMEAGO = config.read_config_var('alarmserver', 'eventtimeago', True, 'bool')
-        config.LOGFILE = config.read_config_var('alarmserver', 'logfile', '', 'str')
-        if config.LOGFILE == '':
-            config.LOGTOFILE = False
-        else:
-            config.LOGTOFILE = True
-
-        config.PARTITIONNAMES={}
-        for i in range(1, MAXPARTITIONS+1):
-            partition = config.read_config_var('alarmserver', 'partition'+str(i), False, 'str', True)
-            if partition: config.PARTITIONNAMES[i] = partition
-
-        config.ZONENAMES={}
-        for i in range(1, MAXZONES+1):
-            zone = config.read_config_var('alarmserver', 'zone'+str(i), False, 'str', True)
-            if zone: config.ZONENAMES[i] = zone
-
-        config.ALARMUSERNAMES={}
-        for i in range(1, MAXALARMUSERS+1):
-            user = config.read_config_var('alarmserver', 'user'+str(i), False, 'str', True)
-            if user: config.ALARMUSERNAMES[i] = user
-
-    @staticmethod
-    def defaulting(section, variable, default, quiet = False):
-        if quiet == False:
-            logger.debug('Config option '+ str(variable) + ' not set in ['+str(section)+'] defaulting to: \''+str(default)+'\'')
-
-    @staticmethod
-    def read_config_var(section, variable, default, type = 'str', quiet = False):
+    def get_val(self, section, variable, default, var_type='str'):
+        """Read configuration variable"""
         try:
-            if type == 'str':
-                return config._config.get(section,variable)
-            elif type == 'bool':
-                return config._config.getboolean(section,variable)
-            elif type == 'int':
-                return int(config._config.get(section,variable))
-            elif type == 'list':
-                return config._config.get(section,variable).split(",")
-            elif type == 'listint':
-                return [int (i) for i in config._config.get(section,variable).split(",")]
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
-            config.defaulting(section, variable, default, quiet)
-            return default
+            if var_type == 'str':
+                ret = self.get(section, variable)
+            elif var_type == 'bool':
+                ret = self.getboolean(section, variable)
+            elif var_type == 'int':
+                ret = int(self.get(section, variable))
+            elif var_type == 'list':
+                ret = self.get(section, variable).split(",")
+            elif var_type == 'listint':
+                ret = [int(i) for i in self.get(section, variable).split(",")]
+        except (configparser.NoSectionError, configparser.NoOptionError):
+            ret = default
+
+        # If the variable is empty, return the default
+        if ret == "":
+            ret = default
+
+        return ret
+
+    # LOGGING
+    @property
+    def logfile(self):
+        """Return logfile from config"""
+        return self.get_val('alarmserver', 'logfile', '', 'str')
+
+    @property
+    def logurlrequests(self):
+        """Return logurlrequests from config"""
+        return self.get_val('alarmserver', 'logurlrequests', True, 'bool')
+
+    # HTTP
+    @property
+    def http(self):
+        """Return https from config"""
+        return self.get_val('alarmserver', 'http', True, 'bool')
+
+    @property
+    def httpport(self):
+        """Return httpsport from config"""
+        return self.get_val('alarmserver', 'httpport', 8011, 'int')
+
+    # HTTPS
+    @property
+    def https(self):
+        """Return https from config"""
+        return self.get_val('alarmserver', 'https', True, 'bool')
+
+    @property
+    def httpsport(self):
+        """Return httpsport from config"""
+        return self.get_val('alarmserver', 'httpsport', 8111, 'int')
+
+    @property
+    def certfile(self):
+        """Return certfile from config"""
+        return self.get_val('alarmserver', 'certfile', 'server.crt', 'str')
+
+    @property
+    def keyfile(self):
+        """Return keyfile from config"""
+        return self.get_val('alarmserver', 'keyfile', 'server.key', 'str')
+
+    # Web auth
+    @property
+    def webauthuser(self):
+        """Return webauthuser from config"""
+        return self.get_val('alarmserver', 'webauthuser', False, 'str')
+
+    @property
+    def webauthpass(self):
+        """Return webauthpass from config"""
+        return self.get_val('alarmserver', 'webauthpass', False, 'str')
+
+    # Events
+    @property
+    def maxevents(self):
+        """Return maxevents from config"""
+        return self.get_val('alarmserver', 'maxevents', 10, 'int')
+
+    @property
+    def maxallevents(self):
+        """Return maxallevents from config"""
+        return self.get_val('alarmserver', 'maxallevents', 100, 'int')
+
+    # This should be an envisalink property
+    @property
+    def enableproxy(self):
+        """Return enableproxy from config"""
+        return self.get_val('alarmserver', 'enableproxy', True, 'bool')
+
+    # Envisalink
+    @property
+    def envisalinkhost(self):
+        """Return envisalinkhost from config"""
+        return self.get_val('envisalink', 'host', 'envisalink', 'str')
+
+    @property
+    def envisalinkport(self):
+        """Return envisalinkport from config"""
+        return self.get_val('envisalink', 'port', 4025, 'int')
+
+    @property
+    def envisalinkpass(self):
+        """Return envisalinkpass from config"""
+        return self.get_val('envisalink', 'pass', 'user', 'str')
+
+    @property
+    def envisalinkkeepalive(self):
+        """Return envisalinkkeepalive from config"""
+        return self.get_val('envisalink', 'keepalive', 60, 'int')
+
+    @property
+    def envisalinklograw(self):
+        """Return envisalinklograw from config"""
+        return self.get_val('envisalink', 'lograwmessage', False, 'bool')
+
+    @property
+    def envisalinkproxyport(self):
+        """Return envisalinkproxyport from config"""
+        return self.get_val('envisalink', 'proxyport', self.envisalinkport, 'int')
+
+    @property
+    def envisalinkproxypass(self):
+        """Return envisalinkproxypass from config"""
+        return self.get_val('envisalink', 'proxypass', self.envisalinkpass, 'str')
+
+    @property
+    def alarmcode(self):
+        """Return alarmcode from config"""
+        return self.get_val('envisalink', 'alarmcode', 1111, 'int')
+
+    @property
+    def eventtimeago(self):
+        """Return eventtimeago from config"""
+        return self.get_val('envisalink', 'eventtimeago', True, 'bool')
+
+    @property
+    def partitionnames(self):
+        """Return partitionnames from config"""
+        ret = {}
+        for i in range(1, self.maxpartitions+1):
+            partition = self.get_val('alarmserver', 'partition{}'.format(i), False, 'str')
+            if partition:
+                ret[i] = partition
+        return ret
+
+    @property
+    def zonenames(self):
+        """Return zonenames from config"""
+        ret = {}
+        for i in range(1, self.maxzones+1):
+            zone = self.get_val('alarmserver', 'zone{}'.format(i), False, 'str')
+            if zone:
+                ret[i] = zone
+        return ret
+
+    @property
+    def alarmusernames(self):
+        """Return alarmusernames from config"""
+        ret = {}
+        for i in range(1, self.maxalarmusers+1):
+            user = self.get_val('alarmserver', 'user{}'.format(i), False, 'str')
+            if user:
+                ret[i] = user
+        return ret

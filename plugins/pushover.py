@@ -1,30 +1,44 @@
-import httplib, urllib, json
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+"""Pushover module"""
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse
+
+from tornado.httpclient import AsyncHTTPClient
 from tornado import gen
 
 from core import logger
-from core.config import config
-from core.events import events
+from core.events import Events
 
-ALARMSERVER_PUSHOVER_TOKEN = "qo0nwMNdX56KJl0Avd4NHE2onO4Xff"
+class Pushover(object):
+    """Pushover plugin class"""
+    def __init__(self, config):
+        """Init function for pushover plugin"""
+        self.config = config
+        self.pushover_token = "qo0nwMNdX56KJl0Avd4NHE2onO4Xff"
+        config.PUSHOVER_ENABLE = config.get_val('pushover', 'enable', False, 'bool')
+        if config.PUSHOVER_ENABLE:
+            config.PUSHOVER_USERTOKEN = config.get_val('pushover', 'usertoken', False, 'str')
+            if config.PUSHOVER_USERTOKEN != False:
+                config.PUSHOVER_IGNOREZONES = config.get_val('pushover',
+                                                             'ignorezones', [], 'listint')
+                config.PUSHOVER_IGNOREPARTITIONS = config.get_val('pushover',
+                                                                  'ignorepartitions', [], 'listint')
+                logger.debug('Pushover Enabled - Partitions Ignored: %s - Zones Ignored: %s'
+                             % (",".join([str(i) for i in config.PUSHOVER_IGNOREPARTITIONS]),
+                                ",".join([str(i) for i in config.PUSHOVER_IGNOREZONES])))
+                Events.register('statechange', self.send_notification,
+                                config.PUSHOVER_IGNOREPARTITIONS, config.PUSHOVER_IGNOREZONES)
 
-def init():
-    config.PUSHOVER_ENABLE = config.read_config_var('pushover', 'enable', False, 'bool')
-    if config.PUSHOVER_ENABLE == True:
-        config.PUSHOVER_USERTOKEN = config.read_config_var('pushover', 'usertoken', False, 'str')
-        if config.PUSHOVER_USERTOKEN != False:
-            config.PUSHOVER_IGNOREZONES = config.read_config_var('pushover', 'ignorezones', [], 'listint')
-            config.PUSHOVER_IGNOREPARTITIONS = config.read_config_var('pushover', 'ignorepartitions', [], 'listint')
-            logger.debug('Pushover Enabled - Partitions Ignored: %s - Zones Ignored: %s' 
-                % (",".join([str (i) for i in config.PUSHOVER_IGNOREPARTITIONS]), ",".join([str(i) for i in config.PUSHOVER_IGNOREZONES])))
-            events.register('statechange', sendNotification, config.PUSHOVER_IGNOREPARTITIONS, config.PUSHOVER_IGNOREZONES)
-
-@gen.coroutine
-def sendNotification(eventType, type, parameters, code, event, message, defaultStatus):
-    http_client = AsyncHTTPClient()
-    body = urllib.urlencode({
-        "token": ALARMSERVER_PUSHOVER_TOKEN,
-        "user": config.PUSHOVER_USERTOKEN,
-        "message": str(message)})
-    res = yield http_client.fetch("https://api.pushover.net/1/messages.json", method='POST', headers={"Content-type": "application/x-www-form-urlencoded"}, body=body)
-    logger.debug('Pushover notification sent')
+    @gen.coroutine
+    def send_notification(self, event_type, type, parameters, code, event, message, default_status):
+        """Send pushover notificiation"""
+        body = urlparse.urlencode({
+            "token": self.pushover_token,
+            "user": self.config.PUSHOVER_USERTOKEN,
+            "message": str(message)})
+        yield AsyncHTTPClient().fetch("https://api.pushover.net/1/messages.json",
+                                      method='POST',
+                                      headers={"Content-type": "application/x-www-form-urlencoded"},
+                                      body=body)
+        logger.debug('Pushover notification sent')
