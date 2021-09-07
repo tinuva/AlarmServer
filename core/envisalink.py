@@ -148,6 +148,10 @@ class Client(object):
             # we don't need to handle this, the callback has been set for
             # closed connections.
             pass
+        except AttributeError:
+            # need to look into this
+            logger.debug("envisalink.py line 145-155 in send_command --> AttributeError: 'NoneType' object has no attribute 'write'")
+            pass
 
     @gen.coroutine
     def handle_line(self, rawinput):
