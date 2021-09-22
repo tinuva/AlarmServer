@@ -2,7 +2,8 @@ name: Build
 on:
   push:
     branches:
-      - main
+      - main # new name in the future
+      - master # legacy
 
 env:
   REGISTRY: ghcr.io
