@@ -334,7 +334,8 @@ class Client(object):
                             if State.get_dict()['zone'][zoneNumber]['status']['bypass'] != bypassed:
                                 updates[zoneNumber] = bypassed
                                 event['status'] = {'bypass' : bypassed}
-                                Events.put('alarm', event['type'], zoneNumber, code, event, message + " to " + ["off", "on"][bypassed], default_status)
+                                message = str.format("Zone {0} bypass to {1}", State.get_dict()['zone'][zoneNumber]['name'], ["off", "on"][bypassed])
+                                Events.put('alarm', event['type'], zoneNumber, code, event, message, default_status)
                                 logger.debug(str.format("(zone {0}) bypass state has updated: {1}", zoneNumber, bypassed))
                     except KeyError:
                         raise Exception("Key(zone) doesn't exist: {0}", zoneNumber)
