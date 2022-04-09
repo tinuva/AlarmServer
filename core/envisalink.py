@@ -12,10 +12,13 @@ from tornado.iostream import StreamClosedError
 from .envisalinkdefs import EVL_RESPONSETYPES
 from .envisalinkdefs import EVL_DEFAULTS
 from .envisalinkdefs import EVL_ARMMODES
+from .envisalinkdefs import EVL_COMMANDS
 
 from . import logger
 from .events import Events
 from .state import State
+
+COMMAND_ERR = "Cannot run this command while disconnected. Please run start() first."
 
 def get_message_type(code):
     """Return message details for message code"""
@@ -369,6 +372,22 @@ class Client(object):
         elif type == 'pgm':
             #TODO: wtf?
             response = {'response': 'Request to trigger PGM'}
+        elif type == 'bypass':
+            self.toggle_zone_bypass(int(parameters['zone']))
+
+    def keypresses_to_partition(self, partitionNumber, keypresses):
+        """Send keypresses (max of 6) to a particular partition."""
+        self.send_command(EVL_COMMANDS['PartitionKeypress'], str.format("{0}{1}", partitionNumber, keypresses[:6]))
+
+    def toggle_zone_bypass(self, zone):
+        """Public method to toggle a zone's bypass state."""
+        self.keypresses_to_partition(1, "*1%02d#" % zone)
+        # if not self._zoneBypassEnabled:
+        #     logger.error(COMMAND_ERR)
+        # elif self._client:
+        #     self.keypresses_to_partition(1, "*1%02d#" % zone)
+        # else:
+        #     logger.error(COMMAND_ERR)
 
     @gen.coroutine
     def envisalink_proxy(self, eventtype, type, parameters, *args):

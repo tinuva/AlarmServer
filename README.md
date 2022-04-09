@@ -70,3 +70,7 @@ REST API Info
 
 * Returns status of eventtimeago from the config file
 
+*/api/alarm/bypass?zone=1*
+
+* Toggle zone 1 bypass
+  * Required param = **zone**  

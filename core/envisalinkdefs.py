@@ -11,6 +11,22 @@ EVL_DEFAULTS = {
 	   'system' : {'fire_key_alarm' : False, 'aux_key_alarm' : False, 'panic_key_alarm' : False, '2wire_alarm' : False, 'battery_trouble' : False, 'ac_trouble' : False, 'system_bell_trouble' : False, 'system_tamper' : False, 'fire_trouble' : False}
 }
 
+EVL_COMMANDS = {
+    'KeepAlive' : '000',
+    'StatusReport' : '001',
+    'DumpZoneTimers' : '008',
+    'PartitionKeypress' : '071',
+    'Disarm' : '040',
+    'ArmStay' : '031',
+    'ArmAway' : '030',
+    'ArmMax' : '032',
+    'Login' : '005',
+    'Panic' : '060',
+    'SendCode' : '200',
+    'CommandOutput' : '020',
+    'SetTime' : '010'
+}
+
 EVL_ARMMODES = {
     0 : 'Away',
     1 : 'Stay',

@@ -23,6 +23,7 @@ class ApiAlarmHandler(tornado.web.RequestHandler):
         parameters = {}
         parameters['alarmcode'] = self.get_argument('alarmcode', None)
         parameters['partition'] = self.get_argument('partition', 1)
+        parameters['zone'] = self.get_argument('zone', None)
         if request == 'arm':
             response = {'response' : 'Request to arm partition %s received'
                                      % parameters['partition']}
@@ -34,6 +35,11 @@ class ApiAlarmHandler(tornado.web.RequestHandler):
                 raise tornado.web.HTTPError(404)
             response = {'response' : 'Request to arm partition %s with code received'
                                      % parameters['partition']}
+        elif request == 'bypass':
+            if parameters['zone'] is None:
+                raise tornado.web.HTTPError(404)
+            response = {'response' : 'Request to bypass zone %s'
+                                     % parameters['zone']}
         elif request == 'disarm':
             if parameters['alarmcode'] is None:
                 raise tornado.web.HTTPError(404)
@@ -86,8 +92,8 @@ def start(config, https=True):
         ext_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../ext')
         return tornado.httpserver.HTTPServer(
             tornado.web.Application([
-                (r'/api/alarm/(arm|stayarm|armwithcode|disarm)', ApiAlarmHandler, 
-                 {'config': config}),
+                (r'/api/alarm/(arm|stayarm|armwithcode|disarm)', ApiAlarmHandler, {'config': config}),
+                (r'/api/alarm/(bypass)', ApiAlarmHandler, {'config': config}),
                 (r'/api/(refresh|pgm)', ApiAlarmHandler, {'config': config}),
                 (r'/api/Config/eventtimeago', ApiEventTimeAgoHandler, {'config': config}),
                 (r'/api', ApiHandler, {'config': config}),
