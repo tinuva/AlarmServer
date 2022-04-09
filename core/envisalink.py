@@ -15,7 +15,7 @@ from .envisalinkdefs import EVL_ARMMODES
 
 from . import logger
 from .events import Events
-
+from .state import State
 
 def get_message_type(code):
     """Return message details for message code"""
@@ -70,6 +70,10 @@ class Client(object):
 
         # Last activity
         self._last_activity = time.time()
+
+        # Zone bypass
+        self._refreshZoneByassState = False
+        self._zoneBypassRefreshTask = None
 
     def check_connection(self):
         """Check the envisalink connection with a ping to make sure it's still alive"""
@@ -252,6 +256,11 @@ class Client(object):
                 if int(parameters) in self.config.zonenames:
                     if self.config.zonenames[int(parameters)] != False:
                         return event['name'].format(str(self.config.zonenames[int(parameters)]))
+            elif event['type'] == 'bypass':
+                logger.debug('bypass type test: ' + str(parameters))
+                #if int(parameters) in self.config.zonenames:
+                #    if self.config.zonenames[int(parameters)] != False:
+                #        return event['name'].format(str(self.config.zonenames[int(parameters)]))
 
         return event['name'].format(str(parameters))
 
@@ -278,7 +287,7 @@ class Client(object):
             default_status = EVL_DEFAULTS[event['type']]
         except IndexError:
             default_status = {}
-
+        
         if (event['type'] == 'zone' and parameters in self.config.zonenames) or\
                 (event['type'] == 'partition' and parameters in self.config.partitionnames):
             Events.put('alarm', event['type'], parameters,
@@ -296,6 +305,42 @@ class Client(object):
     def handle_partition(self, code, parameters, event, message):
         """Handle envisalink partition"""
         self.handle_event(code, parameters[0], event, message)
+
+    def handle_zone_bypass_update(self, code, parameters, event, message):
+        """ Handle zone bypass update triggered when *1 is used on the keypad """
+        #if not self._alarmPanel._zoneBypassEnabled:
+        #    return
+
+        try:
+            default_status = EVL_DEFAULTS[event['type']]
+        except IndexError:
+            default_status = {}
+
+        self._refreshZoneBypassStatus = False
+        if len(parameters) == 16:
+            updates = {}
+            for byte in range(8):
+                bypassBitfield = int('0x' + parameters[byte * 2] + parameters[(byte * 2) + 1], 0)
+
+                for bit in range(8):
+                    zoneNumber = (byte * 8) + bit + 1
+                    bypassed = (bypassBitfield & (1 << bit) != 0)
+
+                    try:
+                        if (event['type'] == 'zone' and zoneNumber in self.config.zonenames):
+                            if State.get_dict()['zone'][zoneNumber]['status']['bypass'] != bypassed:
+                                updates[zoneNumber] = bypassed
+                                event['status'] = {'bypass' : bypassed}
+                                Events.put('alarm', event['type'], zoneNumber, code, event, message + " to " + ["off", "on"][bypassed], default_status)
+                                logger.debug(str.format("(zone {0}) bypass state has updated: {1}", zoneNumber, bypassed))
+                    except KeyError:
+                        raise Exception("Key(zone) doesn't exist: {0}", zoneNumber)
+                        pass
+
+            logger.debug(str.format("zone bypass updates: {0}", updates))
+            return updates
+        else:
+            logger.error(str.format("Invalid parameters length ({0}) has been received in the bypass update.", len(parameters)))
 
     def request_action(self, eventtype, type, parameters):
         """Handle envisalink requested action"""
