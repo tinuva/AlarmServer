@@ -130,8 +130,12 @@
 						<li class="nav-header">Zones</li>
 						<li><a href="#zoneall" data-toggle="tab">All</a></li>
 						{{#each zones}}
-						<li><a href="#zone{{id}}" data-toggle="tab"> <span class="badge {{class}}"> <i
-								class="{{icon}} icon-white"></i></span> {{name}} </a></li>
+						<li>
+							<a href="#zone{{id}}" data-toggle="tab">
+								<button class="btn btn-small" onclick="doAction('/api/alarm/bypass?zone={{id}}');return false;">B{{id}}</button>
+								<span class="badge {{class}}"> 								
+								<i class="{{icon}} icon-white"></i></span> {{name}} </a>
+						</li>
 						{{/each}}
 					</ul>
 				</div>

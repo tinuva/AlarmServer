@@ -47,6 +47,10 @@ function details(obj, templateId) {
 			zone.id = i;
 			zone.class = zone.status.open ? 'badge-important' : 'badge-success';
 			zone.icon = !zone.status.open ? 'icon-ok-sign' : 'icon-minus-sign';
+			if (zone.status.bypass) {
+				zone.class = 'badge-warning';
+				zone.icon = 'icon-ok-sign';
+			}
 			zone.events = createEvents(zone.lastevents);
 			zone.selected = "";
 			if (activeCollapse == "collapseZone" + i) {
