@@ -298,6 +298,10 @@ class Client(object):
         elif event['type'] == 'zone' or event['type'] == 'partition':
             logger.debug('Ignoring unnamed %s %s' %
                          (event['type'], parameters))
+        #TODO: Add events to update 'system' type into state
+        #elif event['type'] == 'system':
+        #     Events.put('alarm', event['type'], parameters,
+        #               code, event, message, default_status)
         else:
             logger.debug('Ignoring unhandled event %s' % event['type'])
 
@@ -311,6 +315,7 @@ class Client(object):
 
     def handle_zone_bypass_update(self, code, parameters, event, message):
         """ Handle zone bypass update triggered when *1 is used on the keypad """
+        #TODO: Configure zonebypass enable/disable config
         #if not self._alarmPanel._zoneBypassEnabled:
         #    return
 
